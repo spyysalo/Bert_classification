@@ -127,7 +127,7 @@ flags.DEFINE_integer(
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
 
-  def __init__(self, guid, text_a, text_b=None, label=None, text_c=None):
+  def __init__(self, guid, text_a, text_b=None, label=None):
     """Constructs a InputExample.
 
     Args:
@@ -143,8 +143,13 @@ class InputExample(object):
     self.text_a = text_a
     self.text_b = text_b
     self.label = label
-    self.text_c = text_c
 
+
+    def get_text_a(self):
+        return self.text_a
+
+    def get_text_c(self):
+        return self.text_c
 
 class PaddingInputExample(object):
   """Fake example so the num input examples is a multiple of the batch size.
@@ -192,6 +197,10 @@ class DataProcessor(object):
 
   def get_labels(self):
     """Gets the list of labels for this data set."""
+    raise NotImplementedError()
+
+  def get_ids(self, data_dir):
+    """Gets the list of ids for this data set."""
     raise NotImplementedError()
 
   @classmethod
@@ -270,10 +279,18 @@ class RamiProcessor(DataProcessor):
     return self._create_examples(
         self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
+  def get_ids(self, data_dir):
+    with open(data_dir + "/test.tsv", "r") as f:
+        reader = csv.reader(f)
+        lines = []
+        for line in reader:
+            splitted = str(line).split("\\")
+            lines.append(splitted[0][2:] + "\t" + splitted[1][1:] + "\t" + splitted[3][1:] + "\t")
+        return lines
+
   def get_labels(self):
     """See base class."""
     return ["org", "ggp", "che", "dis"]
-
 
   def _create_examples(self, lines, set_type):
     """Creates examples for the training and dev sets."""
@@ -284,16 +301,13 @@ class RamiProcessor(DataProcessor):
         continue
       guid = "%s-%s" % (set_type, i)
       if set_type == "test":
-        doc_id = tokenization.convert_to_unicode(line[0])
-        annotation_id = tokenization.convert_to_unicode(line[1])
         text_a = tokenization.convert_to_unicode(line[3])
-        text_c = ";".join(doc_id + annotation_id)
         label = "org"
       else:
         text_a = tokenization.convert_to_unicode(line[3])
         label = tokenization.convert_to_unicode(line[2])
       examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=None, label=label, text_c=text_c))
+          InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
     return examples
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
@@ -710,6 +724,20 @@ def category_name(n):
     }
     return category.get(n)
 
+def key_value_dictionary(label_list, probabilities):
+    category = {
+        "org": 0,
+        "ggp": 0,
+        "che": 0,
+        "dis": 0,
+    }
+
+    k, m = 0, 0
+    while m in label_list and k in probabilities:
+        category[m] = k
+
+    return category
+
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -855,7 +883,8 @@ def main(_):
 
   if FLAGS.do_predict:
     predict_examples = processor.get_test_examples(FLAGS.data_dir)
-    doc_ids = predict_examples[1].text_c
+    doc_ids = processor.get_ids(FLAGS.data_dir)
+
     num_actual_predict_examples = len(predict_examples)
     if FLAGS.use_tpu:
       # TPU requires a fixed batch size for all batches, therefore the number
@@ -896,11 +925,7 @@ def main(_):
           break
 
         output_line = ""
-        # doc_n_ann = doc_ids[i].split(";")
-        j = 0
-        for class_probability in probabilities:
-            output_line += str(class_probability) + "\t" + category_name(label_list[j]) + "\t"  #+ doc_n_ann[0] + "\t" + doc_n_ann[1] + "\n"
-            j += 1
+        output_line += doc_ids[i] + print(key_value_dictionary(label_list, probabilities)) + "\n"
 
         writer.write(output_line)
         num_written_lines += 1
