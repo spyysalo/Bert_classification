@@ -285,7 +285,7 @@ class RamiProcessor(DataProcessor):
         lines = []
         for line in reader:
             splitted = str(line).split("\\")
-            lines.append(splitted[0][2:] + "\t" + splitted[1][1:] + "\t" + splitted[3][1:] + "\t")
+            lines.append(splitted[0][2:] + "\t" + splitted[1][1:] + "\t" + splitted[3][1:-2] + "\t")
         return lines
 
   def get_labels(self):
@@ -732,9 +732,8 @@ def key_value_dictionary(label_list, probabilities):
         "dis": 0,
     }
 
-    k, m = 0, 0
-    while m in label_list and k in probabilities:
-        category[m] = k
+    for i in range(0, len(category)):
+        category[label_list[i]] = round(probabilities[i], 3)
 
     return category
 
@@ -924,10 +923,7 @@ def main(_):
         if i >= num_actual_predict_examples:
           break
 
-        output_line = ""
-        output_line += doc_ids[i] + print(key_value_dictionary(label_list, probabilities)) + "\n"
-
-        writer.write(output_line)
+        writer.write(doc_ids[i] + str(key_value_dictionary(label_list, probabilities)) + "\n")
         num_written_lines += 1
     assert num_written_lines == num_actual_predict_examples
 
