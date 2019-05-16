@@ -280,13 +280,11 @@ class RamiProcessor(DataProcessor):
         self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
   def get_ids(self, data_dir):
-    with open(data_dir + "/test.tsv", "r") as f:
-        reader = csv.reader(f)
-        lines = []
-        for line in reader:
-            splitted = str(line).split("\\")
-            lines.append(splitted[0][2:] + "\t" + splitted[1] + "\t" + splitted[3][1:-1] + "\t")
-        return lines
+    reader = self._read_tsv(os.path.join(data_dir, "test.tsv"), "r")
+    lines = []
+    for line in reader:
+        lines.append(line[0] + "\t" + line[1] + "\t" + line[3] + "\t")
+    return lines
 
   def get_labels(self):
     """See base class."""
