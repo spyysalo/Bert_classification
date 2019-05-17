@@ -213,6 +213,15 @@ class DataProcessor(object):
         lines.append(line)
       return lines
 
+  @classmethod
+  def _read_simple_tsv(cls, input_file):
+    with open(input_file) as f:
+      lines = []
+      for line in f:
+        line = line.rstrip('\n')
+        lines.append(line.split('\t'))
+      return lines
+
 
 class XnliProcessor(DataProcessor):
   """Processor for the XNLI data set."""
@@ -267,20 +276,20 @@ class RamiProcessor(DataProcessor):
   def get_train_examples(self, data_dir):
     """See base class."""
     return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+        self._read_simple_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
   def get_dev_examples(self, data_dir):
     """See base class."""
     return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+        self._read_simple_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
   def get_test_examples(self, data_dir):
     """See base class."""
     return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+        self._read_simple_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
   def get_ids(self, data_dir):
-    reader = self._read_tsv(os.path.join(data_dir, "test.tsv"), "r")
+    reader = self._read_simple_tsv(os.path.join(data_dir, "test.tsv"))
     lines = []
     for line in reader:
         lines.append(line[0] + "\t" + line[1] + "\t" + line[3] + "\t")
